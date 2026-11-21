@@ -19,7 +19,7 @@ toggle.addEventListener('click', () => { const open = toggle.getAttribute('aria-
 nav.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { nav.classList.remove('open'); toggle.setAttribute('aria-expanded', 'false'); }));
 if ('IntersectionObserver' in window) {
   const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) nav.querySelectorAll('a').forEach(link => link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id)); }), { rootMargin: '-20% 0px -55% 0px' });
-  document.querySelectorAll('main section[id]').forEach(section => observer.observe(section));
+  document.querySelectorAll('main section[id], #portfolio-quest').forEach(section => observer.observe(section));
 }
 const projects = {
   treffas: { title: 'Treffas — online booking', description: 'An online booking system developed using ReactJS, Node.js, and Laravel.', features: ['Implemented RESTful APIs to connect application services.', 'Optimized database queries, improving performance by 40%.', 'Integrated AWS S3, EC2, and Route53 for cloud infrastructure and deployment automation.'] },
@@ -55,7 +55,7 @@ function requestScrollUpdate() {
 window.addEventListener('scroll', requestScrollUpdate, { passive: true });
 window.addEventListener('resize', requestScrollUpdate, { passive: true });
 let revealObserver;
-const revealTargets = document.querySelectorAll('.section-heading, .about > div, .skill-grid article, .project-card, .experience > div:first-child, .timeline article, .services > h2, .services-grid article, .contact > div, .contact > form');
+const revealTargets = document.querySelectorAll('.section-heading, .about > div, .skill-grid article, .web-stack-heading, .web-stack-grid article, .project-card, .experience > div:first-child, .timeline article, .services > h2, .services-grid article, .contact > div, .contact > form');
 function configureReveals() {
   revealObserver?.disconnect();
   revealTargets.forEach(element => element.classList.remove('reveal-pending', 'is-visible'));

@@ -18,10 +18,10 @@
   let paused = false, hidden = false, frame = 0, lastY = window.scrollY;
   let target = 0, position = 0, lastTime = 0, settleTimer, waveTimer;
   let scene3D = null, loading3D = false, failed3D = false, currentSection = 'home';
-  let scrollImpulse = 0;
+  let scrollImpulse = 0, gameOpen = false;
   buddy.hidden = false;
 
-  function canMove() { return !paused && !reduced.matches && !hidden; }
+  function canMove() { return !paused && !reduced.matches && !hidden && !gameOpen; }
   function render(time) {
     frame = 0;
     if (!canMove()) return;
@@ -66,7 +66,7 @@
     cancelAnimationFrame(frame); frame = 0; lastTime = 0;
     clearTimeout(settleTimer);
     buddy.classList.remove('is-scrolling');
-    buddy.classList.toggle('is-paused', paused || reduced.matches);
+    buddy.classList.toggle('is-paused', paused || reduced.matches || gameOpen);
     scene3D?.setMotion(canMove());
     character.style.setProperty('--buddy-lean', '0deg');
     buddy.style.setProperty('--buddy-look', '0px');
@@ -91,7 +91,7 @@
     waveTimer = setTimeout(() => buddy.classList.remove('is-greeting'), 1100);
   });
   async function load3D() {
-    if (loading3D || scene3D || failed3D || hidden || reduced.matches) return;
+    if (loading3D || scene3D || failed3D || hidden || reduced.matches || gameOpen) return;
     loading3D = true;
     try {
       const { createCompanion } = await import('./companion-3d.js');
@@ -123,6 +123,11 @@
   window.addEventListener('scroll', update, { passive: true });
   window.addEventListener('resize', update, { passive: true });
   reduced.addEventListener('change', onMotionPreference);
+  window.addEventListener('portfolio-game-state', event => {
+    gameOpen = Boolean(event.detail?.open); syncMotion();
+    buddy.classList.toggle('is-in-world', gameOpen);
+    if (!gameOpen) load3D();
+  });
   update(); syncMotion();
   if ('requestIdleCallback' in window) requestIdleCallback(load3D, { timeout: 1800 });
   else setTimeout(load3D, 300);

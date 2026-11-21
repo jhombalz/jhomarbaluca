@@ -6,7 +6,7 @@
   ring.className = 'cursor-ring';
   ring.setAttribute('aria-hidden', 'true');
   document.body.append(ring);
-  const cards = [...document.querySelectorAll('.desk-card, .project-card, .skill-grid article, .services-grid article')];
+  const cards = [...document.querySelectorAll('.desk-card, .project-card, .skill-grid article, .web-stack-grid article, .services-grid article')];
   cards.forEach(card => card.classList.add('motion-card'));
   let enabled = false, frame = 0, lastTime = 0, visible = false;
   let x = 0, y = 0, aimX = 0, aimY = 0, currentCard = null, bounds = null;
