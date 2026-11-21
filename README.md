@@ -6,7 +6,7 @@ Content is based on the supplied resume. The project illustrations are conceptua
 
 The contact form opens a mailto draft. It does not send or store messages on a server. The resume download includes the personal contact details in the supplied PDF.
 
-Edit index.html for biography and experience, index.js for skills, project notes, and scroll interactions. style.css supplies the base components; design.css supplies the editorial layout and effects; quest.css styles the inline game and detailed web stack.
+Edit index.html for biography and experience, index.js for skills, project notes, and scroll interactions. style.css supplies the base components; design.css supplies the editorial layout and effects; quest.css styles the exploration preview and detailed web stack; flight.css styles Plane Mode.
 
 The hero contains an inline exploration game, with direct links to real portfolio sections. It is not a connected AI chat. Scroll effects use native scrolling and IntersectionObserver, and respect the system’s reduced-motion preference. Content remains visible without JavaScript. The Skills section includes detailed frontend, application, database, and cloud/workflow stack information based on the resume.
 
@@ -18,5 +18,7 @@ interactions.js adds a cursor halo, click ripples, gentle card tilt, and illustr
 
 scroll-outlines.js adds an orange SVG stroke that travels around cards and project illustration frames with page scrolling. ResizeObserver keeps each outline fitted to its frame, and offscreen outlines skip updates. With reduced motion enabled, the accent stays still.
 
-Explore the game directly in the hero, or use the “Explore” navigation link. quest.js handles movement, five resume-based discoveries, touch controls, pause/restart, and an accessible topic list. quest-world.js loads when the island enters view. Keyboard controls only handle movement while the island or its movement buttons have focus; the rest of the page scrolls normally. Rendering pauses offscreen, in background tabs, and while a project dialog is open. The floating companion pauses while the island is active. Visitors can explore every discovery with the topic buttons; a simple map remains available if WebGL fails. Reduced motion uses quiet mode with the topic list. No score, visitor data, or progress is stored.
+The hero offers “Enter Plane Mode”: an optional full-viewport sky with a paper airplane, drifting clouds, and five information gates. Arrow keys/WASD or the touch controls steer horizontally and vertically while forward flight is automatic. Passing through a gate pauses flight and shows resume-based information; “Continue flying” resumes. Missed gates recycle. Pause, restart, Exit Plane Mode, and Escape are supported. Topic buttons provide the same information without steering.
+
+quest.js handles the preview, flight UI, discoveries, keyboard/touch controls, and lifecycle. flight-physics.mjs contains bounded movement and collision detection; flight-world.js lazy-loads the local Three.js renderer. flight.css styles the sky and HUD. Closing Plane Mode disposes GPU resources and restores focus and page scrolling. Flight pauses when the tab loses focus; reduced motion stops automatic flight. If WebGL or module loading is unavailable, all five discoveries remain available through topic buttons. No visitor data or progress is persisted. Run the collision/movement checks with `node --test tests/flight-physics.test.mjs`.
 # jhomarbaluca
