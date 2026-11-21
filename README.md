@@ -6,5 +6,7 @@ Content is based on the supplied resume. The project illustrations are conceptua
 
 The contact form opens a mailto draft. It does not send or store messages on a server. The resume download includes the personal contact details in the supplied PDF.
 
-Edit index.html for biography and experience, index.js for skills and project notes, and style.css for the visual design.
+Edit index.html for biography and experience, index.js for skills, project notes, and scroll interactions. style.css supplies the base components; design.css supplies the editorial layout, workspace preview, and responsive overrides.
+
+The workspace preview links to real portfolio sections. It is not a connected AI chat. Scroll effects use native scrolling and IntersectionObserver, and respect the system’s reduced-motion preference. Content remains visible without JavaScript.
 # jhomarbaluca

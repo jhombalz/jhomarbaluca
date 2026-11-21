@@ -31,3 +31,53 @@ document.querySelector('.dialog-close').addEventListener('click', () => dialog.c
 document.querySelector('#dialog-contact').addEventListener('click', () => dialog.close());
 dialog.addEventListener('click', event => { if (event.target === dialog) { const bounds = dialog.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close(); } });
 document.querySelector('#contact-form').addEventListener('submit', event => { event.preventDefault(); const data = new FormData(event.currentTarget); const body = `Hi Jhomar,\n\n${data.get('message')}\n\nFrom: ${data.get('name')}\nEmail: ${data.get('email')}`; window.location.href = `mailto:jhomar.baluca@gmail.com?subject=${encodeURIComponent(data.get('subject'))}&body=${encodeURIComponent(body)}`; document.querySelector('#form-status').textContent = 'Your email draft is ready in your email app. If it did not open, email jhomar.baluca@gmail.com directly.'; });
+
+// Use native scrolling so keyboard, touch, and anchor navigation stay familiar.
+const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+const pageHeader = document.querySelector('header');
+const workspace = document.querySelector('.workspace');
+let scrollFrame = 0;
+function updateScrollEffects() {
+  scrollFrame = 0;
+  const distance = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = distance > 0 ? Math.min(1, Math.max(0, window.scrollY / distance)) : 0;
+  document.documentElement.style.setProperty('--scroll-progress', progress);
+  pageHeader.classList.toggle('is-scrolled', window.scrollY > 20);
+  if (workspace) {
+    const offset = !motionPreference.matches && window.innerWidth > 700 ? Math.min(1, Math.max(0, window.scrollY / 650)) : 0;
+    workspace.style.setProperty('--workspace-y', `${offset * -20}px`);
+    workspace.style.setProperty('--workspace-tilt', `${offset * 3}deg`);
+  }
+}
+function requestScrollUpdate() {
+  if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScrollEffects);
+}
+window.addEventListener('scroll', requestScrollUpdate, { passive: true });
+window.addEventListener('resize', requestScrollUpdate, { passive: true });
+let revealObserver;
+const revealTargets = document.querySelectorAll('.section-heading, .about > div, .skill-grid article, .project-card, .experience > div:first-child, .timeline article, .services > h2, .services-grid article, .contact > div, .contact > form');
+function configureReveals() {
+  revealObserver?.disconnect();
+  revealTargets.forEach(element => element.classList.remove('reveal-pending', 'is-visible'));
+  if (!motionPreference.matches && 'IntersectionObserver' in window) {
+    revealObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        revealObserver.unobserve(entry.target);
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -25px 0px' });
+    revealTargets.forEach(element => {
+      // Leave content already on screen visible, including after a deep-link load.
+      if (element.getBoundingClientRect().top < window.innerHeight) return;
+      const siblings = [...element.parentElement.children];
+      const index = siblings.indexOf(element);
+      element.style.setProperty('--reveal-delay', `${Math.min(index, 3) * 70}ms`);
+      element.classList.add('reveal-pending');
+      revealObserver.observe(element);
+    });
+  }
+  requestScrollUpdate();
+}
+motionPreference.addEventListener('change', configureReveals);
+configureReveals();
