@@ -39,4 +39,29 @@
 <section id="contact" class="contact section"><div><p class="eyebrow">06 / SAY HELLO</p><h2>Have an idea?<br>Let’s build <em>something great.</em></h2><p>Tell me about your project, your team, or what you have in mind. I’d love to hear from you.</p><a class="contact-email" href="mailto:jhomar.baluca@gmail.com">jhomar.baluca@gmail.com ↗</a><div class="contact-details"><a href="tel:+639976174857">+63 997 6174 857</a><span>San Francisco, Ubay, Bohol</span></div><a class="text-button" href="assets/jhomar-baluca-resume.pdf" download>Get my resume ↓</a></div><form id="contact-form"><div class="form-row"><label>Your name<input name="name" autocomplete="name" placeholder="Juan dela Cruz" required maxlength="100"></label><label>Your email<input name="email" type="email" autocomplete="email" placeholder="hello@example.com" required maxlength="200"></label></div><label>What are you thinking?<input name="subject" placeholder="A website, an app, a collaboration…" required maxlength="200"></label><label>Your message<textarea name="message" rows="4" placeholder="A little about your idea…" required maxlength="5000"></textarea></label><button class="button" type="submit">Let’s start a conversation <span>↗</span></button><p class="form-note" id="form-status" aria-live="polite">This opens your email app with a draft ready to send.</p></form></section>
 </main><footer><a class="wordmark" href="#home">jhomar<span>.</span></a><p>Thoughtfully built. Always evolving.</p><span>© <span id="year"></span> Jhomar Baluca</span><a href="#home">Back to top ↑</a></footer></div>
 <dialog id="project-dialog"><button class="dialog-close" aria-label="Close project details">×</button><p class="eyebrow">PROJECT NOTES</p><h2 id="dialog-title"></h2><p id="dialog-description"></p><ul id="dialog-features"></ul><p class="dialog-note">Project details are based on my resume. Contact me to discuss my contributions.</p><a class="button" href="#contact" id="dialog-contact">Let’s talk ↗</a></dialog>
+<aside class="scroll-buddy" aria-label="Portfolio companion" hidden>
+  <div class="buddy-bubble">Hey, I’m JB. Scroll with me!</div>
+  <button class="buddy-hide" type="button" aria-label="Hide portfolio companion" title="Hide companion">×</button>
+  <button class="buddy-pause" type="button" aria-label="Pause companion animation" aria-pressed="false" title="Pause companion animation">Ⅱ</button>
+  <button class="buddy-character" type="button" aria-label="Say hello to JB" title="Say hello to JB">
+    <svg viewBox="0 0 120 140" fill="none" aria-hidden="true">
+      <ellipse class="buddy-shadow" cx="60" cy="132" rx="28" ry="5" fill="#536c54" opacity=".15"/>
+      <g class="buddy-figure" stroke="#354f3c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path class="buddy-leg leg-left" d="M46 110v13h-9"/><path class="buddy-leg leg-right" d="M74 110v13h9"/>
+        <path class="buddy-arm arm-left" d="M33 85Q15 83 18 69"/><path class="buddy-arm arm-right" d="M87 85q18-2 15-16"/>
+        <rect x="31" y="69" width="58" height="44" rx="17" fill="#d5dfbe"/>
+        <path d="m51 86-7 5 7 5m18-10 7 5-7 5m-7-12-4 14" stroke="#6a8154" stroke-width="2"/>
+        <path d="M60 26V17"/><circle cx="60" cy="13" r="5" fill="#cfad79"/>
+        <rect x="20" y="28" width="80" height="51" rx="20" fill="#faf5e7"/>
+        <path d="M21 47h-5v15h5m78-15h5v15h-5" fill="#b6c59d"/>
+        <g class="buddy-eyes" fill="#354f3c" stroke="none"><ellipse cx="44" cy="51" rx="4" ry="6"/><ellipse cx="76" cy="51" rx="4" ry="6"/></g>
+        <path d="M52 63q8 7 16 0"/><path d="M33 62h7m40 0h7" stroke="#c99e88" stroke-width="4" opacity=".65"/>
+        <path d="M35 36q22-6 44-1" stroke="#fffdf7" stroke-width="3"/>
+      </g>
+    </svg>
+  </button>
+  <span class="buddy-caption">JB · YOUR SCROLL BUDDY</span>
+</aside>
+<script src="companion.js" defer></script>
+<script src="interactions.js" defer></script>
 </body></html>
