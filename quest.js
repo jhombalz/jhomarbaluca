@@ -14,8 +14,19 @@
   const found=new Set(),keys=new Set(),topicButtons=new Map();
   let state=null,physics=null,world=null,generation=0,frame=0,last=0;
   let ready=false,paused=false,reading=null,fallback=false,opener=null,previousOverflow='';
+  let arcadePreference=true;
+  let autoFirePreference=true;
+  const upgrades=new Set();
 
-  const canFly=()=>dialog.open&&ready&&world&&!paused&&!reading&&!fallback&&!reduced.matches&&!document.hidden;
+  function restoreUpgrades(){upgrades.forEach(id=>physics.awardDiscoveryUpgrade(state,id));}
+  function rewardReading(){
+    if(!reading||!state||!physics)return false;
+    const granted=physics.awardDiscoveryUpgrade(state,reading.id);
+    if(granted)upgrades.add(reading.id);
+    return granted;
+  }
+
+  const canFly=()=>dialog.open&&ready&&world&&!paused&&!reading&&!state?.crashed&&!fallback&&!reduced.matches&&!document.hidden;
   function announce(text){dialog.querySelector('.flight-announcement').textContent=text;}
   function updateProgress(){
     root.querySelector('#quest-count').textContent=`${found.size} / ${topics.length}`;
@@ -47,9 +58,32 @@
     dialog.classList.toggle('is-flight-paused',paused&&!reading);
     dialog.querySelector('.flight-pause').textContent=paused?'Resume':'Pause';
     dialog.querySelector('.flight-pause').setAttribute('aria-pressed',String(paused));
-    dialog.querySelector('.flight-pause').disabled=!ready||fallback||reduced.matches||Boolean(reading);
+    dialog.querySelector('.flight-pause').disabled=!ready||fallback||reduced.matches||Boolean(reading)||Boolean(state?.crashed);
     dialog.querySelectorAll('[data-flight-move]').forEach(button=>button.disabled=!canFly());
     dialog.querySelector('.flight-continue').textContent=fallback||reduced.matches?'Back to the sky ↗':'Continue flying ↗';
+    syncArcadeHUD();
+  }
+  function syncArcadeHUD(){
+    const score=dialog.querySelector('.flight-score'),shield=dialog.querySelector('.flight-shield'),toggle=dialog.querySelector('.flight-arcade-toggle');
+    const points=`Score ${state?.score||0}`,energy=state?.shield??3;
+    if(score.textContent!==points)score.textContent=points;
+    const shieldText=arcadePreference?`Shield ${'◆'.repeat(energy)}${'◇'.repeat(3-energy)}`:'Calm flight';
+    if(shield.textContent!==shieldText){shield.textContent=shieldText;shield.setAttribute('aria-label',arcadePreference?`Shield: ${energy} of 3`:'Calm flight, no obstacles');}
+    const label=arcadePreference?'Arcade: on':'Arcade: off';if(toggle.textContent!==label)toggle.textContent=label;
+    toggle.setAttribute('aria-pressed',String(arcadePreference));toggle.disabled=!state||fallback||reduced.matches;
+    dialog.classList.toggle('has-low-shield',Boolean(state?.arcade&&energy===1));
+    dialog.querySelector('.flight-fire').disabled=!canFly()||!state?.arcade;
+    const weapon=dialog.querySelector('.flight-weapon'),volley=state?.volleyCount??2;
+    const weaponText=`${volley} bullets / volley`;if(weapon.textContent!==weaponText)weapon.textContent=weaponText;
+    const auto=dialog.querySelector('.flight-auto-fire'),autoLabel=autoFirePreference?'Auto fire: on':'Auto fire: off';
+    if(auto.textContent!==autoLabel)auto.textContent=autoLabel;
+    auto.setAttribute('aria-pressed',String(autoFirePreference));auto.disabled=!state||!state.arcade||fallback||reduced.matches;
+  }
+  function showGameOver(){
+    stop();reading=null;info.hidden=true;
+    dialog.querySelector('.flight-over').hidden=false;dialog.querySelector('.flight-final-score').textContent=`Score ${state.score}`;
+    syncUI();paint();announce(`Shield depleted. Score ${state.score}. Retry or continue without obstacles.`);
+    dialog.querySelector('#flight-over-title').focus({preventScroll:true});
   }
   function stop(){cancelAnimationFrame(frame);frame=0;last=0;clearInput();}
   function schedule(){if(!frame&&canFly()){last=0;frame=requestAnimationFrame(tick);}}
@@ -61,6 +95,7 @@
     const stack=info.querySelector('.flight-info-stack');stack.replaceChildren();
     topic.stack.split(' · ').forEach(item=>{const tag=document.createElement('span');tag.textContent=item;stack.append(tag);});
     const link=info.querySelector('a');link.href=topic.href;link.textContent=topic.link;
+    info.querySelector('.flight-upgrade-note').textContent=upgrades.has(topic.id)?'Weapon upgrade already unlocked.':`Continue to unlock +1 bullet. Your next volley: ${Math.min(7,(state?.volleyCount??2)+1)} bullets.`;
     info.hidden=false;syncUI();paint();
     announce(`${topic.label} discovered. Flight paused. ${found.size} of ${topics.length} explored.`);
     info.querySelector('h3').focus({preventScroll:true});
@@ -75,8 +110,12 @@
   function tick(time){
     frame=0;if(!canFly())return;
     const dt=last?Math.min((time-last)/1000,.05):0;last=time;
-    const hit=physics.advanceFlight(state,{x:Number(keys.has('right'))-Number(keys.has('left')),y:Number(keys.has('up'))-Number(keys.has('down'))},dt);
+    const previousShield=state.shield;
+    const hit=physics.advanceFlight(state,{x:Number(keys.has('right'))-Number(keys.has('left')),y:Number(keys.has('up'))-Number(keys.has('down')),fire:autoFirePreference||keys.has('fire')},dt);
     state.still=false;world.render(state,time);nextGuidance();
+    syncArcadeHUD();
+    if(state.crashed){showGameOver();return;}
+    if(state.shield<previousShield)announce(`Shield hit. ${state.shield} of 3 remaining. Dodge the red enemy shots or destroy their drones.`);
     if(hit){showDiscovery(topics.find(topic=>topic.id===hit));return;}
     frame=requestAnimationFrame(tick);
   }
@@ -90,6 +129,7 @@
     if(dialog.open)return;
     opener=event?.currentTarget||document.activeElement;paused=false;reading=null;ready=false;fallback=false;
     info.hidden=true;dialog.querySelector('.flight-fallback').hidden=true;
+    dialog.querySelector('.flight-over').hidden=true;
     dialog.showModal();previousOverflow=document.body.style.overflow;document.body.style.overflow='hidden';
     window.dispatchEvent(new CustomEvent('portfolio-game-state',{detail:{open:true}}));
     viewport.focus({preventScroll:true});dialog.querySelector('.flight-guidance').textContent='Preparing the skies…';
@@ -97,6 +137,8 @@
     try{
       physics=await import('./flight-physics.mjs');if(token!==generation||!dialog.open)return;
       state=physics.createFlightState(topics);
+      restoreUpgrades();
+      physics.setArcadeEnabled(state,arcadePreference);
       if(reduced.matches){readingMode('Reduced motion is on. Explore every gate with the topic buttons, without automatic flight.');return;}
       const {createFlightWorld}=await import('./flight-world.js');if(token!==generation||!dialog.open)return;
       if(reduced.matches){readingMode('Reduced motion is on. Explore every gate with the topic buttons, without automatic flight.');return;}
@@ -111,18 +153,37 @@
   }
   document.querySelectorAll('[data-open-flight]').forEach(button=>button.addEventListener('click',open));
   dialog.querySelector('.flight-exit').addEventListener('click',()=>dialog.close());dialog.addEventListener('close',close);
-  info.querySelector('a').addEventListener('click',()=>dialog.close());
+  info.querySelector('a').addEventListener('click',()=>{rewardReading();dialog.close();});
   dialog.querySelector('.flight-continue').addEventListener('click',()=>{
-    reading=null;paused=false;info.hidden=true;clearInput();syncUI();paint();nextGuidance();schedule();viewport.focus({preventScroll:true});announce('Ready to explore the next gate.');
+    const upgraded=rewardReading();
+    if(state?.crashed){showGameOver();return;}
+    reading=null;paused=false;info.hidden=true;clearInput();syncUI();paint();nextGuidance();schedule();viewport.focus({preventScroll:true});announce(upgraded?`Weapon upgraded. ${state.volleyCount} bullets per volley. Ready for the next gate.`:'Ready to explore the next gate.');
   });
   dialog.querySelector('.flight-pause').addEventListener('click',()=>{paused=!paused;stop();syncUI();paint();if(!paused)schedule();announce(paused?'Flight paused. Press Resume to continue.':'Flight resumed.');});
   dialog.querySelector('.flight-restart').addEventListener('click',()=>{
-    if(!physics)return;stop();state=physics.createFlightState(topics);found.clear();updateProgress();reading=null;paused=false;info.hidden=true;
+    if(!physics)return;stop();upgrades.clear();state=physics.createFlightState(topics);physics.setArcadeEnabled(state,arcadePreference);found.clear();updateProgress();reading=null;paused=false;info.hidden=true;dialog.querySelector('.flight-over').hidden=true;
     syncUI();paint();nextGuidance();schedule();viewport.focus({preventScroll:true});announce('New flight. Five discoveries ahead.');
   });
-  const keyMap={ArrowUp:'up',w:'up',ArrowDown:'down',s:'down',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right'};
+  dialog.querySelector('.flight-arcade-toggle').addEventListener('click',()=>{
+    if(!state||!physics)return;arcadePreference=!arcadePreference;physics.setArcadeEnabled(state,arcadePreference);clearInput();
+    if(!state.crashed)dialog.querySelector('.flight-over').hidden=true;
+    syncUI();paint();schedule();announce(arcadePreference?'Arcade on. Enemy drones shoot red bolts. Dodge and hold Space to fire.':'Calm flight. Enemies and all blasters disabled.');
+  });
+  dialog.querySelector('.flight-auto-fire').addEventListener('click',()=>{
+    autoFirePreference=!autoFirePreference;syncUI();announce(autoFirePreference?'Automatic fire enabled.':'Automatic fire disabled. Hold Space or Fire to shoot manually.');
+  });
+  dialog.querySelector('.flight-calm').addEventListener('click',()=>{
+    arcadePreference=false;physics.setArcadeEnabled(state,false);dialog.querySelector('.flight-over').hidden=true;paused=false;reading=null;
+    syncUI();paint();schedule();viewport.focus({preventScroll:true});announce('Continue exploring without obstacles.');
+  });
+  dialog.querySelector('.flight-retry').addEventListener('click',()=>{
+    stop();state=physics.createFlightState(topics);restoreUpgrades();arcadePreference=true;paused=false;reading=null;dialog.querySelector('.flight-over').hidden=true;
+    syncUI();paint();nextGuidance();schedule();viewport.focus({preventScroll:true});announce('New arcade flight. Shield restored. Your discoveries are preserved.');
+  });
+  const keyMap={ArrowUp:'up',w:'up',ArrowDown:'down',s:'down',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right',' ':'fire'};
   dialog.addEventListener('keydown',event=>{
     if(event.ctrlKey||event.metaKey||event.altKey)return;
+    if(event.key===' '&&event.target instanceof Element&&event.target.closest('button')&&!event.target.closest('.flight-fire'))return;
     const key=keyMap[event.key]||keyMap[event.key.toLowerCase()];if(!key||!canFly())return;
     event.preventDefault();keys.add(key);
   });
@@ -133,6 +194,10 @@
     button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
     button.addEventListener('click',event=>{if(event.detail!==0||!canFly())return;const key=button.dataset.flightMove;keys.add(key);setTimeout(()=>keys.delete(key),180);});
   });
+  const fire=dialog.querySelector('.flight-fire');
+  fire.addEventListener('pointerdown',event=>{if(!canFly()||!state.arcade)return;event.preventDefault();keys.add('fire');fire.setPointerCapture(event.pointerId);});
+  const releaseFire=()=>keys.delete('fire');fire.addEventListener('pointerup',releaseFire);fire.addEventListener('pointercancel',releaseFire);fire.addEventListener('lostpointercapture',releaseFire);
+  fire.addEventListener('click',event=>{if(event.detail===0&&canFly()&&state.arcade){keys.add('fire');setTimeout(releaseFire,180);}});
   function loseFocus(){clearInput();if(dialog.open&&ready&&!reading){paused=true;stop();syncUI();paint();}}
   window.addEventListener('blur',loseFocus);document.addEventListener('visibilitychange',()=>{if(document.hidden)loseFocus();});
   reduced.addEventListener('change',()=>{

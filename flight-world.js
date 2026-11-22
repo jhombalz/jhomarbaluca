@@ -28,6 +28,41 @@ export function createFlightWorld(host,topics,{onFailure}) {
   triangle([[0,.08,-2.1],[0,-.18,1.25],[.2,.34,.65]],paper);
   const seamGeometry=own(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,.08,-2.1),new THREE.Vector3(0,-.18,1.25)]));
   const seamMaterial=new THREE.LineBasicMaterial({color:'#c5eaff'});materials.add(seamMaterial);plane.add(new THREE.Line(seamGeometry,seamMaterial));
+  const droneBodyMaterial=material('#322d46',{metalness:.55,roughness:.4});
+  const droneWingMaterial=material('#692e48',{metalness:.35,roughness:.5,side:THREE.DoubleSide});
+  const droneBody=own(new THREE.OctahedronGeometry(1));
+  const droneWing=own(new THREE.BufferGeometry());
+  droneWing.setAttribute('position',new THREE.Float32BufferAttribute([
+    -.15,0,.65,-1.7,-.08,-.8,-1.35,.12,.3,
+    .15,0,.65,1.35,.12,.3,1.7,-.08,-.8,
+    0,.12,-.2,0,.75,-.8,0,0,-1.05
+  ],3));droneWing.computeVertexNormals();
+  const droneEdges=own(new THREE.EdgesGeometry(droneWing));
+  const droneEdgeMaterial=new THREE.LineBasicMaterial({color:'#ff8485'});materials.add(droneEdgeMaterial);
+  const visorGeometry=own(new THREE.BoxGeometry(.5,.095,.12));
+  const gunGeometry=own(new THREE.CylinderGeometry(.07,.07,.7,6));
+  const chargeGeometry=own(new THREE.TorusGeometry(.35,.035,5,20));
+  const drones=Array.from({length:6},()=>{
+    const group=new THREE.Group(),body=new THREE.Mesh(droneBody,droneBodyMaterial),wing=new THREE.Mesh(droneWing,droneWingMaterial);
+    body.scale.set(.5,.28,1.15);group.add(body,wing,new THREE.LineSegments(droneEdges,droneEdgeMaterial));
+    const glow=material('#ff515f',{emissive:'#ff203e',emissiveIntensity:.9});
+    const visor=new THREE.Mesh(visorGeometry,glow);visor.position.set(0,.16,.75);group.add(visor);
+    for(const side of [-1,1]){const gun=new THREE.Mesh(gunGeometry,glow);gun.rotation.x=Math.PI/2;gun.position.set(side*.95,0,.4);group.add(gun);}
+    const charge=new THREE.Mesh(chargeGeometry,glow);charge.position.z=1;charge.visible=false;group.add(charge);
+    group.userData.glow=glow;group.userData.charge=charge;
+    scene.add(group);return group;
+  });
+  const shotGeometry=own(new THREE.CylinderGeometry(.065,.065,1,6));
+  const shotMaterial=new THREE.MeshBasicMaterial({color:'#9ff8ff',toneMapped:false});materials.add(shotMaterial);
+  const shots=Array.from({length:96},()=>{const mesh=new THREE.Mesh(shotGeometry,shotMaterial);mesh.rotation.x=Math.PI/2;mesh.visible=false;scene.add(mesh);return mesh;});
+  const enemyShotGeometry=own(new THREE.CapsuleGeometry(.12,.65,3,6));
+  const enemyShotMaterial=new THREE.MeshBasicMaterial({color:'#ff6a7a',toneMapped:false});materials.add(enemyShotMaterial);
+  const enemyShots=Array.from({length:24},()=>{const mesh=new THREE.Mesh(enemyShotGeometry,enemyShotMaterial);mesh.visible=false;scene.add(mesh);return mesh;});
+  const upAxis=new THREE.Vector3(0,1,0),shotDirection=new THREE.Vector3();
+  const burstGeometry=own(new THREE.TorusGeometry(.6,.045,5,20));
+  const bursts=Array.from({length:8},()=>{const mat=new THREE.MeshBasicMaterial({color:'#ffbc7b',transparent:true,opacity:0,toneMapped:false,depthWrite:false});materials.add(mat);const mesh=new THREE.Mesh(burstGeometry,mat);mesh.visible=false;scene.add(mesh);return mesh;});
+  const shieldMaterial=new THREE.MeshBasicMaterial({color:'#8be5ff',wireframe:true,transparent:true,opacity:.13,depthWrite:false});materials.add(shieldMaterial);
+  const shield=new THREE.Mesh(own(new THREE.SphereGeometry(2,12,8)),shieldMaterial);shield.scale.set(1,.3,1);shield.visible=false;plane.add(shield);
   const sphere=own(new THREE.SphereGeometry(1,24,16)),cloudMaterial=material('#9db2dc');
   const starPositions=[];
   for(let i=0;i<120;i++)starPositions.push(Math.sin(i*12.7)*150,25+(i*17%100),-40-(i*23%190));
@@ -68,6 +103,11 @@ export function createFlightWorld(host,topics,{onFailure}) {
     plane.position.set(state.x,state.y+1,0);
     plane.rotation.z=active?THREE.MathUtils.lerp(plane.rotation.z,-state.steerX*.45,.16):plane.rotation.z;
     plane.rotation.x=active?THREE.MathUtils.lerp(plane.rotation.x,.13+state.steerY*.15,.16):plane.rotation.x;
+    shield.visible=state.arcade&&state.invulnerable>0;
+    drones.forEach((model,index)=>{const drone=state.drones?.[index];model.visible=Boolean(state.arcade&&drone);if(drone){model.position.set(drone.x,drone.y+1,drone.z);model.rotation.z=Math.sin(state.distance*.025+index)*.12;model.userData.charge.visible=Boolean(drone.charging);model.userData.glow.emissiveIntensity=drone.charging?3:.9;}});
+    shots.forEach((model,index)=>{const shot=state.shots?.[index];model.visible=Boolean(state.arcade&&shot);if(shot)model.position.set(shot.x,shot.y+1,shot.z);});
+    enemyShots.forEach((model,index)=>{const shot=state.enemyShots?.[index];model.visible=Boolean(state.arcade&&shot);if(shot){model.position.set(shot.x,shot.y+1,shot.z);shotDirection.set(shot.vx,shot.vy,shot.vz).normalize();model.quaternion.setFromUnitVectors(upAxis,shotDirection);}});
+    bursts.forEach((model,index)=>{const effect=state.effects?.[index];model.visible=Boolean(state.arcade&&effect);if(effect){model.position.set(effect.x,effect.y+1,effect.z);model.scale.setScalar(1+(.55-effect.life)*5);model.material.opacity=effect.life/.55;}});
     if(active){camera.position.x=THREE.MathUtils.lerp(camera.position.x,state.x*.28,.08);camera.position.y=THREE.MathUtils.lerp(camera.position.y,5+state.y*.25,.08);}
     camera.lookAt(state.x*.25,1+state.y*.2,-25);
     state.gates.forEach(gate=>{const model=gates.get(gate.id);model.group.position.set(gate.x,gate.y+1,gate.z);model.ringMaterial.color.set(gate.hit?'#b3a1ff':'#64e4ff');model.ringMaterial.emissive.set(gate.hit?'#7965cf':'#22b6ec');});
